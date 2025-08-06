@@ -29,13 +29,14 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 typedef struct
 {
   /* bpService */
+  uint8_t               Mycharnotify_Notification_Status;
   /* USER CODE BEGIN CUSTOM_APP_Context_t */
 
   /* USER CODE END CUSTOM_APP_Context_t */
@@ -72,14 +73,28 @@ uint8_t UpdateCharData[512];
 uint8_t NotifyCharData[512];
 uint16_t Connection_Handle;
 /* USER CODE BEGIN PV */
-
+extern bool flag_Update;
+uint8_t test;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* bpService */
+static void Custom_Mycharnotify_Update_Char(void);
+static void Custom_Mycharnotify_Send_Notification(void);
 
 /* USER CODE BEGIN PFP */
-
+void myTask(void)
+{
+	if(flag_Update == true) {
+		flag_Update = false;
+		test++;
+		UpdateCharData[0] = test;
+		Custom_Mycharnotify_Update_Char();
+	}
+//	UpdateCharData[0] = 0x1;
+//	Custom_Mycharnotify_Update_Char();
+	UTIL_SEQ_SetTask(1 << CFG_TASK_MY_TASK, CFG_SCH_PRIO_0);
+}
 /* USER CODE END PFP */
 
 /* Functions Definition ------------------------------------------------------*/
@@ -99,6 +114,18 @@ void Custom_STM_App_Notification(Custom_STM_App_Notification_evt_t *pNotificatio
       /* USER CODE BEGIN CUSTOM_STM_CHARWRITE_WRITE_EVT */
 
       /* USER CODE END CUSTOM_STM_CHARWRITE_WRITE_EVT */
+      break;
+
+    case CUSTOM_STM_MYCHARNOTIFY_NOTIFY_ENABLED_EVT:
+      /* USER CODE BEGIN CUSTOM_STM_MYCHARNOTIFY_NOTIFY_ENABLED_EVT */
+
+      /* USER CODE END CUSTOM_STM_MYCHARNOTIFY_NOTIFY_ENABLED_EVT */
+      break;
+
+    case CUSTOM_STM_MYCHARNOTIFY_NOTIFY_DISABLED_EVT:
+      /* USER CODE BEGIN CUSTOM_STM_MYCHARNOTIFY_NOTIFY_DISABLED_EVT */
+
+      /* USER CODE END CUSTOM_STM_MYCHARNOTIFY_NOTIFY_DISABLED_EVT */
       break;
 
     case CUSTOM_STM_NOTIFICATION_COMPLETE_EVT:
@@ -175,6 +202,44 @@ void Custom_APP_Init(void)
  *************************************************************/
 
 /* bpService */
+__USED void Custom_Mycharnotify_Update_Char(void) /* Property Read */
+{
+  uint8_t updateflag = 0;
+
+  /* USER CODE BEGIN Mycharnotify_UC_1*/
+
+  /* USER CODE END Mycharnotify_UC_1*/
+
+  if (updateflag == 0)
+  {
+    Custom_STM_App_Update_Char(CUSTOM_STM_MYCHARNOTIFY, (uint8_t *)UpdateCharData);
+  }
+
+  /* USER CODE BEGIN Mycharnotify_UC_Last*/
+
+  /* USER CODE END Mycharnotify_UC_Last*/
+  return;
+}
+
+void Custom_Mycharnotify_Send_Notification(void) /* Property Notification */
+{
+  uint8_t updateflag = 0;
+
+  /* USER CODE BEGIN Mycharnotify_NS_1*/
+
+  /* USER CODE END Mycharnotify_NS_1*/
+
+  if (updateflag != 0)
+  {
+    Custom_STM_App_Update_Char(CUSTOM_STM_MYCHARNOTIFY, (uint8_t *)NotifyCharData);
+  }
+
+  /* USER CODE BEGIN Mycharnotify_NS_Last*/
+
+  /* USER CODE END Mycharnotify_NS_Last*/
+
+  return;
+}
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTIONS*/
 

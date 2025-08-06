@@ -225,9 +225,9 @@ uint8_t index_con_int, mutex;
 /**
  * Advertising Data
  */
-uint8_t a_AdvData[9] =
+uint8_t a_AdvData[11] =
 {
-  8, AD_TYPE_COMPLETE_LOCAL_NAME, 'T', 'r', 'u', 'm', 'B', 'L', 'E',  /* Complete name */
+  10, AD_TYPE_COMPLETE_LOCAL_NAME, 'S', 'T', 'M', '3', '2', '_', 'B', 'L', 'E',  /* Complete name */
 
 };
 
@@ -266,7 +266,8 @@ void APP_BLE_Init(void)
   tBleStatus ret = BLE_STATUS_INVALID_PARAMS;
 #endif /* RADIO_ACTIVITY_EVENT != 0 */
   /* USER CODE BEGIN APP_BLE_Init_1 */
-
+  UTIL_SEQ_RegTask(1 << CFG_TASK_MY_TASK, UTIL_SEQ_RFU, myTask);
+  UTIL_SEQ_SetTask(1 << CFG_TASK_MY_TASK, CFG_SCH_PRIO_0);
   /* USER CODE END APP_BLE_Init_1 */
   SHCI_C2_Ble_Init_Cmd_Packet_t ble_init_cmd_packet =
   {
