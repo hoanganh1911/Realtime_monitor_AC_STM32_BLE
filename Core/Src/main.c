@@ -40,81 +40,28 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-UART_HandleTypeDef hlpuart1;
+IPCC_HandleTypeDef hipcc;
+
+RTC_HandleTypeDef hrtc;
 
 /* USER CODE BEGIN PV */
-#define RX_BUFFER_SIZE 4
-#define TX_BUFFER_SIZE 2
-uint8_t rxBuffer[RX_BUFFER_SIZE];
-uint8_t rxBuffer1[RX_BUFFER_SIZE];
 
-uint8_t txBuffer[TX_BUFFER_SIZE];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_LPUART1_UART_Init(void);
+static void MX_IPCC_Init(void);
+static void MX_RTC_Init(void);
+static void MX_RF_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-//Electrical parameter register (read only)
-#define BL0942_VREF 1.218   //芯片参考基准源电压
 
-#define BL0942_V_RMS_LBS 73989
-#define BL0942_V_R1  2340000
-#define BL0942_V_R2  510
-
-#define BL0942_I_RMS_LBS 305978
-float BL0942_I_R1  = 1 ;     //电流采样系数
-float BL0942_I_Rt =888 ;  //电流环变比
-//current = (get_reg_data * BL0942_VREF) / (BL0942_I_RMS_LBS * (BL0942_I_R1 * 1000.0) / BL0942_I_Rt);
-
-//(1638.4 * 256 * BL0942_VREF * BL0942_VREF * BL0942_V_R1) / (3600000* 3537 * (BL0942_I_R1 * 1000 / BL0942_I_Rt) * BL0942_V_R2 * 1000);
-//#define BL0942_CF_CNT 0.00018729
-#define BL0942_CF_CNT (1638.4 * 256 * BL0942_VREF * BL0942_VREF * BL0942_V_R1) / (3600000.0* 3537.0 * (BL0942_I_R1 * 1000.0 / BL0942_I_Rt) * BL0942_V_R2 * 1000.0)
-
-uint32_t I_RMS_ADC = 0;
-uint32_t V_RMS_ADC = 0;
-
-
-float voltage;
-float current;
-//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-//{
-//    if (huart->Instance == LPUART1)
-//    {
-//        //HAL_UART_Transmit(&hlpuart1, rxBuffer, RX_BUFFER_SIZE, HAL_MAX_DELAY);
-//    	int32_t data = (int32_t)((uint8_t)rxBuffer[2] << 16 |
-//    	                         (uint8_t)rxBuffer[1] << 8  |
-//    	                         (uint8_t)rxBuffer[0]);
-
-//        if (data != 0)
-//        {
-//            I_RMS_ADC = data;
-//        }
-//        else
-//        {
-//            if(V_RMS_ADC <1 && data ==0)
-//            {
-//                I_RMS_ADC = 0;
-//            }
-//
-//            data = I_RMS_ADC;
-//        }
-//    	current = (data * BL0942_VREF) / (BL0942_I_RMS_LBS * (BL0942_I_R1 * 1000.0) / BL0942_I_Rt);
-
-//    	data = data << 8; // 将数据左移8位，将符号位移至32位整数的符号位位置
-//    	data = data >> 8; // 算术右移回来，如果最高位是1，则会正确填充符号位
-//    	voltage = (data * BL0942_VREF * BL0942_V_R1) / (BL0942_V_RMS_LBS * BL0942_V_R2 * 1000.0);
-
-//        HAL_UART_Receive_IT(&hlpuart1, rxBuffer, RX_BUFFER_SIZE);
-//    }
-//}
 /* USER CODE END 0 */
 
 /**
@@ -130,8 +77,10 @@ int main(void)
 
   /* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all perip herals, Initializes the Flash interface and the Systick. */
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
+  /* Config code for STM32_WPAN (HSE Tuning must be done before system clock configuration) */
+  MX_APPE_Config();
 
   /* USER CODE BEGIN Init */
 
@@ -143,69 +92,32 @@ int main(void)
   /* Configure the peripherals common clocks */
   PeriphCommonClock_Config();
 
+  /* IPCC initialisation */
+  MX_IPCC_Init();
+
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_LPUART1_UART_Init();
+  MX_RTC_Init();
+  MX_RF_Init();
   /* USER CODE BEGIN 2 */
-//  HAL_UART_Receive_IT(&hlpuart1, rxBuffer, RX_BUFFER_SIZE);
 
-
-//  HAL_UART_Receive_IT(&hlpuart1, rxBuffer, RX_BUFFER_SIZE);
-
-//  if (HAL_UART_Receive(&hlpuart1, rxBuffer, RX_BUFFER_SIZE, HAL_MAX_DELAY) != HAL_OK) {
-//      Error_Handler();
-//  }
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, 1);
-  uint32_t get_reg_data,get_reg_data1;
   /* USER CODE END 2 */
+
+  /* Init code for STM32_WPAN */
+  MX_APPE_Init();
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
+    MX_APPE_Process();
 
     /* USER CODE BEGIN 3 */
-
-	  // Gửi lệnh đọc thanh ghi 0x03 // dòng điện
-	  txBuffer[0] = 0x58;
-	  txBuffer[1] = 0x03;
-	  HAL_UART_Transmit(&hlpuart1, txBuffer, 2, 1000);
-	  HAL_UART_Receive(&hlpuart1, rxBuffer, RX_BUFFER_SIZE, 1000);
-//	  get_reg_data = 0;
-	  get_reg_data = (int32_t)((uint8_t)rxBuffer[2] << 16 |
-				    	                         (uint8_t)rxBuffer[1] << 8  |
-				     	                         (uint8_t)rxBuffer[0]);
-		if (get_reg_data != 0)
-		{
-			I_RMS_ADC = get_reg_data;
-		}
-		else
-		{
-			if(get_reg_data ==0)
-			{
-				I_RMS_ADC = 0;
-			}
-			get_reg_data = I_RMS_ADC;
-		}
-		current = (get_reg_data * BL0942_VREF) / (BL0942_I_RMS_LBS * (BL0942_I_R1 * 1000.0) / BL0942_I_Rt);
-	  // Gửi lệnh đọc thanh ghi 0x04 điện áp
-		HAL_Delay(100);
-		txBuffer[0] = 0x58;
-	  txBuffer[1] = 0x04;
-	  HAL_UART_Transmit(&hlpuart1, txBuffer, 2, 1000);
-	  HAL_UART_Receive(&hlpuart1, rxBuffer1, RX_BUFFER_SIZE, 1000);
-//	  get_reg_data = 0;
-	  get_reg_data1 = (int32_t)((uint8_t)rxBuffer1[2] << 16 |
-												 (uint8_t)rxBuffer1[1] << 8  |
-												 (uint8_t)rxBuffer1[0]);
-	  voltage = (get_reg_data1 * BL0942_VREF * BL0942_V_R1) / (BL0942_V_RMS_LBS * BL0942_V_R2 * 1000.0);
-	  V_RMS_ADC = voltage;
-	  HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
@@ -226,13 +138,19 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI1
+                              |RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.MSIState = RCC_MSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.MSICalibrationValue = RCC_MSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
+  RCC_OscInitStruct.PLL.PLLN = 8;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -243,14 +161,14 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK4|RCC_CLOCKTYPE_HCLK2
                               |RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLK2Divider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLK4Divider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.AHBCLK2Divider = RCC_SYSCLK_DIV2;
+  RCC_ClkInitStruct.AHBCLK4Divider = RCC_SYSCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -266,7 +184,8 @@ void PeriphCommonClock_Config(void)
 
   /** Initializes the peripherals clock
   */
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_SMPS;
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_SMPS|RCC_PERIPHCLK_RFWAKEUP;
+  PeriphClkInitStruct.RFWakeUpClockSelection = RCC_RFWKPCLKSOURCE_HSE_DIV1024;
   PeriphClkInitStruct.SmpsClockSelection = RCC_SMPSCLKSOURCE_HSI;
   PeriphClkInitStruct.SmpsDivSelection = RCC_SMPSCLKDIV_RANGE1;
 
@@ -280,50 +199,92 @@ void PeriphCommonClock_Config(void)
 }
 
 /**
-  * @brief LPUART1 Initialization Function
+  * @brief IPCC Initialization Function
   * @param None
   * @retval None
   */
-static void MX_LPUART1_UART_Init(void)
+static void MX_IPCC_Init(void)
 {
 
-  /* USER CODE BEGIN LPUART1_Init 0 */
+  /* USER CODE BEGIN IPCC_Init 0 */
 
-  /* USER CODE END LPUART1_Init 0 */
+  /* USER CODE END IPCC_Init 0 */
 
-  /* USER CODE BEGIN LPUART1_Init 1 */
+  /* USER CODE BEGIN IPCC_Init 1 */
 
-  /* USER CODE END LPUART1_Init 1 */
-  hlpuart1.Instance = LPUART1;
-  hlpuart1.Init.BaudRate = 4800;
-  hlpuart1.Init.WordLength = UART_WORDLENGTH_8B;
-  hlpuart1.Init.StopBits = UART_STOPBITS_1;
-  hlpuart1.Init.Parity = UART_PARITY_NONE;
-  hlpuart1.Init.Mode = UART_MODE_TX_RX;
-  hlpuart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  hlpuart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  hlpuart1.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  hlpuart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  hlpuart1.FifoMode = UART_FIFOMODE_DISABLE;
-  if (HAL_UART_Init(&hlpuart1) != HAL_OK)
+  /* USER CODE END IPCC_Init 1 */
+  hipcc.Instance = IPCC;
+  if (HAL_IPCC_Init(&hipcc) != HAL_OK)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_SetTxFifoThreshold(&hlpuart1, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_SetRxFifoThreshold(&hlpuart1, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_DisableFifoMode(&hlpuart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN LPUART1_Init 2 */
+  /* USER CODE BEGIN IPCC_Init 2 */
 
-  /* USER CODE END LPUART1_Init 2 */
+  /* USER CODE END IPCC_Init 2 */
+
+}
+
+/**
+  * @brief RF Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_RF_Init(void)
+{
+
+  /* USER CODE BEGIN RF_Init 0 */
+
+  /* USER CODE END RF_Init 0 */
+
+  /* USER CODE BEGIN RF_Init 1 */
+
+  /* USER CODE END RF_Init 1 */
+  /* USER CODE BEGIN RF_Init 2 */
+
+  /* USER CODE END RF_Init 2 */
+
+}
+
+/**
+  * @brief RTC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_RTC_Init(void)
+{
+
+  /* USER CODE BEGIN RTC_Init 0 */
+
+  /* USER CODE END RTC_Init 0 */
+
+  /* USER CODE BEGIN RTC_Init 1 */
+
+  /* USER CODE END RTC_Init 1 */
+
+  /** Initialize RTC Only
+  */
+  hrtc.Instance = RTC;
+  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+  hrtc.Init.AsynchPrediv = CFG_RTC_ASYNCH_PRESCALER;
+  hrtc.Init.SynchPrediv = CFG_RTC_SYNCH_PRESCALER;
+  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+  hrtc.Init.OutPutRemap = RTC_OUTPUT_REMAP_NONE;
+  if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Enable the WakeUp
+  */
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 0, RTC_WAKEUPCLOCK_RTCCLK_DIV16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN RTC_Init 2 */
+
+  /* USER CODE END RTC_Init 2 */
 
 }
 
@@ -334,23 +295,13 @@ static void MX_LPUART1_UART_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
 
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : PA6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_6;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -358,6 +309,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 /* USER CODE END 4 */
 
 /**
@@ -374,8 +326,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.

@@ -9,6 +9,16 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include Utilities/sequencer/subdir.mk
+-include Utilities/lpm/tiny_lpm/subdir.mk
+-include STM32_WPAN/Target/subdir.mk
+-include STM32_WPAN/App/subdir.mk
+-include Middlewares/ST/STM32_WPAN/utilities/subdir.mk
+-include Middlewares/ST/STM32_WPAN/interface/patterns/ble_thread/tl/subdir.mk
+-include Middlewares/ST/STM32_WPAN/interface/patterns/ble_thread/shci/subdir.mk
+-include Middlewares/ST/STM32_WPAN/ble/svc/Src/subdir.mk
+-include Middlewares/ST/STM32_WPAN/ble/core/template/subdir.mk
+-include Middlewares/ST/STM32_WPAN/ble/core/auto/subdir.mk
 -include Drivers/STM32WBxx_HAL_Driver/Src/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
@@ -34,34 +44,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := test-uart
+BUILD_ARTIFACT_NAME := RT_Monitor
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-test-uart.elf \
+RT_Monitor.elf \
 
 MAP_FILES += \
-test-uart.map \
+RT_Monitor.map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-test-uart.list \
+RT_Monitor.list \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: test-uart.elf secondary-outputs
+main-build: RT_Monitor.elf secondary-outputs
 
 # Tool invocations
-test-uart.elf test-uart.map: $(OBJS) $(USER_OBJS) C:\Users\Luong\ Quoc\ Dat\Documents\task\ cty\task2\test-uart\STM32WB55CGUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "test-uart.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Luong Quoc Dat\Documents\task cty\task2\test-uart\STM32WB55CGUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="test-uart.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+RT_Monitor.elf RT_Monitor.map: $(OBJS) $(USER_OBJS) C:\Users\hogan\STM32CubeIDE\workspace_1.18.0\RT_Monitor\STM32WB55CGUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "RT_Monitor.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\hogan\STM32CubeIDE\workspace_1.18.0\RT_Monitor\STM32WB55CGUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="RT_Monitor.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -70,14 +80,14 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-test-uart.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "test-uart.list"
+RT_Monitor.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "RT_Monitor.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) default.size.stdout test-uart.elf test-uart.list test-uart.map
+	-$(RM) RT_Monitor.elf RT_Monitor.list RT_Monitor.map default.size.stdout
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
