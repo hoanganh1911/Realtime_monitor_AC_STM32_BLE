@@ -74,7 +74,8 @@ uint8_t NotifyCharData[512];
 uint16_t Connection_Handle;
 /* USER CODE BEGIN PV */
 extern bool flag_Update;
-uint8_t test;
+extern uint8_t BLESetName[50];
+float power_watts = 74.3;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -87,12 +88,18 @@ void myTask(void)
 {
 	if(flag_Update == true) {
 		flag_Update = false;
-		test++;
-		UpdateCharData[0] = test;
+	    const char* outlet_id = "A1";
+	    const char* timestamp = "2025-05-23T15:40:00Z";
+	    power_watts ++;
+	    snprintf((char*)UpdateCharData, sizeof(UpdateCharData),
+	        "{\n"
+	        "\"outlet_id\": \"%s\",\n"
+	        "\"timestamp\": \"%s\",\n"
+	        "\"power_watts\": %.1f\n"
+	        "}\n",
+			(char *)BLESetName, timestamp, power_watts);
 		Custom_Mycharnotify_Update_Char();
 	}
-//	UpdateCharData[0] = 0x1;
-//	Custom_Mycharnotify_Update_Char();
 	UTIL_SEQ_SetTask(1 << CFG_TASK_MY_TASK, CFG_SCH_PRIO_0);
 }
 /* USER CODE END PFP */
@@ -110,10 +117,10 @@ void Custom_STM_App_Notification(Custom_STM_App_Notification_evt_t *pNotificatio
     /* USER CODE END CUSTOM_STM_App_Notification_Custom_Evt_Opcode */
 
     /* bpService */
-    case CUSTOM_STM_CHARWRITE_WRITE_EVT:
-      /* USER CODE BEGIN CUSTOM_STM_CHARWRITE_WRITE_EVT */
+    case CUSTOM_STM_RELAYCONTROL_WRITE_EVT:
+      /* USER CODE BEGIN CUSTOM_STM_RELAYCONTROL_WRITE_EVT */
 
-      /* USER CODE END CUSTOM_STM_CHARWRITE_WRITE_EVT */
+      /* USER CODE END CUSTOM_STM_RELAYCONTROL_WRITE_EVT */
       break;
 
     case CUSTOM_STM_MYCHARNOTIFY_NOTIFY_ENABLED_EVT:
@@ -126,6 +133,12 @@ void Custom_STM_App_Notification(Custom_STM_App_Notification_evt_t *pNotificatio
       /* USER CODE BEGIN CUSTOM_STM_MYCHARNOTIFY_NOTIFY_DISABLED_EVT */
 
       /* USER CODE END CUSTOM_STM_MYCHARNOTIFY_NOTIFY_DISABLED_EVT */
+      break;
+
+    case CUSTOM_STM_SET_DEVICE_NAME_WRITE_EVT:
+      /* USER CODE BEGIN CUSTOM_STM_SET_DEVICE_NAME_WRITE_EVT */
+
+      /* USER CODE END CUSTOM_STM_SET_DEVICE_NAME_WRITE_EVT */
       break;
 
     case CUSTOM_STM_NOTIFICATION_COMPLETE_EVT:
@@ -207,10 +220,10 @@ __USED void Custom_Mycharnotify_Update_Char(void) /* Property Read */
   uint8_t updateflag = 0;
 
   /* USER CODE BEGIN Mycharnotify_UC_1*/
-
+  updateflag = 1;
   /* USER CODE END Mycharnotify_UC_1*/
 
-  if (updateflag == 0)
+  if (updateflag != 0)
   {
     Custom_STM_App_Update_Char(CUSTOM_STM_MYCHARNOTIFY, (uint8_t *)UpdateCharData);
   }

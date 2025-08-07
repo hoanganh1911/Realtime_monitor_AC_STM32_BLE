@@ -35,17 +35,20 @@ extern "C" {
 typedef enum
 {
   /* bpService */
-  CUSTOM_STM_CHARWRITE,
+  CUSTOM_STM_RELAYCONTROL,
   CUSTOM_STM_MYCHARNOTIFY,
+  CUSTOM_STM_SET_DEVICE_NAME,
 } Custom_STM_Char_Opcode_t;
 
 typedef enum
 {
-  /* charWrite */
-  CUSTOM_STM_CHARWRITE_WRITE_EVT,
+  /* relayControl */
+  CUSTOM_STM_RELAYCONTROL_WRITE_EVT,
   /* myCharNotify */
   CUSTOM_STM_MYCHARNOTIFY_NOTIFY_ENABLED_EVT,
   CUSTOM_STM_MYCHARNOTIFY_NOTIFY_DISABLED_EVT,
+  /* set_device_name */
+  CUSTOM_STM_SET_DEVICE_NAME_WRITE_EVT,
   CUSTOM_STM_NOTIFICATION_COMPLETE_EVT,
 
   CUSTOM_STM_BOOT_REQUEST_EVT
@@ -71,8 +74,9 @@ typedef struct
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
-extern uint16_t SizeCharwrite;
+extern uint16_t SizeRelaycontrol;
 extern uint16_t SizeMycharnotify;
+extern uint16_t SizeSet_Device_Name;
 
 /* USER CODE BEGIN EC */
 

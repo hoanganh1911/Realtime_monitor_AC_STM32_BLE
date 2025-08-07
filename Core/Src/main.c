@@ -26,7 +26,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+RTC_TimeTypeDef sTime;
+RTC_DateTypeDef sDate;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -89,17 +90,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	{
 		HAL_UART_Transmit(&hlpuart1, (uint8_t*)"OK\n", strlen("OK\n"), HAL_MAX_DELAY);
 		HAL_UART_Receive_IT(&hlpuart1, rxBuffer, 1);
-	}
-}
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	if(htim->Instance == TIM2){
-		tick++;
-		if (tick == 5) {
-			tick = 0;
-			flag_Update = true;
-		}
 	}
 }
 /* USER CODE END 0 */
@@ -456,7 +446,18 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if(htim->Instance == TIM2){
+//		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+//		HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+		tick++;
+		if (tick == 5) {
+			tick = 0;
+			flag_Update = true;
+		}
+	}
+}
 /* USER CODE END 4 */
 
 /**
