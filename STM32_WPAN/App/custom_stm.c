@@ -32,6 +32,7 @@ typedef struct{
   uint16_t  CustomRelaycontrolHdle;                  /**< relayControl handle */
   uint16_t  CustomMycharnotifyHdle;                  /**< myCharNotify handle */
   uint16_t  CustomSet_Device_NameHdle;                  /**< set_device_name handle */
+  uint16_t  CustomSet_Date_And_TimeHdle;                  /**< set_date_and_time handle */
 /* USER CODE BEGIN Context */
   /* Place holder for Characteristic Descriptors Handle*/
 
@@ -40,7 +41,9 @@ typedef struct{
 
 extern uint16_t Connection_Handle;
 /* USER CODE BEGIN PTD */
-
+extern RTC_TimeTypeDef sTime;
+extern RTC_DateTypeDef sDate;
+extern RTC_HandleTypeDef hrtc;
 /* USER CODE END PTD */
 
 /* Private defines -----------------------------------------------------------*/
@@ -69,6 +72,7 @@ extern uint16_t Connection_Handle;
 uint16_t SizeRelaycontrol = 5;
 uint16_t SizeMycharnotify = 100;
 uint16_t SizeSet_Device_Name = 9;
+uint16_t SizeSet_Date_And_Time = 25;
 
 /**
  * START of Section BLE_DRIVER_CONTEXT
@@ -111,6 +115,7 @@ do {\
 #define COPY_RELAYCONTROL_UUID(uuid_struct)    COPY_UUID_128(uuid_struct,0x00,0x00,0x00,0x00,0x8e,0x22,0x45,0x41,0x9d,0x4c,0x21,0xed,0xae,0x82,0xed,0x19)
 #define COPY_MYCHARNOTIFY_UUID(uuid_struct)    COPY_UUID_128(uuid_struct,0x00,0x00,0x00,0x01,0x8e,0x22,0x45,0x41,0x9d,0x4c,0x21,0xed,0xae,0x82,0xed,0x19)
 #define COPY_SET_DEVICE_NAME_UUID(uuid_struct)    COPY_UUID_128(uuid_struct,0x00,0x00,0x00,0x02,0x8e,0x22,0x45,0x41,0x9d,0x4c,0x21,0xed,0xae,0x82,0xed,0x19)
+#define COPY_SET_DATE_AND_TIME_UUID(uuid_struct)    COPY_UUID_128(uuid_struct,0x00,0x00,0x00,0x03,0x8e,0x22,0x45,0x41,0x9d,0x4c,0x21,0xed,0xae,0x82,0xed,0x19)
 
 /* USER CODE BEGIN PF */
 
@@ -212,6 +217,46 @@ static SVCCTL_EvtAckStatus_t Custom_STM_Event_Handler(void *Event)
             memcpy(BLESetName, attribute_modified->Attr_Data, attribute_modified->Attr_Data_Length);
             /* USER CODE END CUSTOM_STM_Service_1_Char_3_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
           } /* if (attribute_modified->Attr_Handle == (CustomContext.CustomSet_Device_NameHdle + CHARACTERISTIC_VALUE_ATTRIBUTE_OFFSET))*/
+          else if (attribute_modified->Attr_Handle == (CustomContext.CustomSet_Date_And_TimeHdle + CHARACTERISTIC_VALUE_ATTRIBUTE_OFFSET))
+          {
+            return_value = SVCCTL_EvtAckFlowEnable;
+            /* USER CODE BEGIN CUSTOM_STM_Service_1_Char_4_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
+            int h, m, s, d, mo, y, ret;
+            ret = sscanf((char *)attribute_modified->Attr_Data, "%d/%d/%d.%d/%d/%d",
+                         &h, &m, &s, &d, &mo, &y);
+            if (ret == 6) {
+                sTime.Hours   = (uint8_t) h;
+                sTime.Minutes = (uint8_t) m;
+                sTime.Seconds = (uint8_t) s;
+                sDate.Date    = (uint8_t) d;
+                sDate.Month   = (uint8_t) mo;
+                sDate.Year    = (uint8_t) y;
+            } else {
+                Error_Handler();
+            }
+            hrtc.Instance = RTC;
+            hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+            hrtc.Init.AsynchPrediv = CFG_RTC_ASYNCH_PRESCALER;
+            hrtc.Init.SynchPrediv = CFG_RTC_SYNCH_PRESCALER;
+            hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+            hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+            hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+            hrtc.Init.OutPutRemap = RTC_OUTPUT_REMAP_NONE;
+            if (HAL_RTC_Init(&hrtc) != HAL_OK)
+            {
+              Error_Handler();
+            }
+            if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK)
+            {
+              Error_Handler();
+            }
+
+            if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
+            {
+              Error_Handler();
+            }
+            /* USER CODE END CUSTOM_STM_Service_1_Char_4_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
+          } /* if (attribute_modified->Attr_Handle == (CustomContext.CustomSet_Date_And_TimeHdle + CHARACTERISTIC_VALUE_ATTRIBUTE_OFFSET))*/
           /* USER CODE BEGIN EVT_BLUE_GATT_ATTRIBUTE_MODIFIED_END */
 
           /* USER CODE END EVT_BLUE_GATT_ATTRIBUTE_MODIFIED_END */
@@ -308,18 +353,19 @@ void SVCCTL_InitCustomSvc(void)
   /**
    *          bpService
    *
-   * Max_Attribute_Records = 1 + 2*3 + 1*no_of_char_with_notify_or_indicate_property + 1*no_of_char_with_broadcast_property
+   * Max_Attribute_Records = 1 + 2*4 + 1*no_of_char_with_notify_or_indicate_property + 1*no_of_char_with_broadcast_property
    * service_max_attribute_record = 1 for bpService +
    *                                2 for relayControl +
    *                                2 for myCharNotify +
    *                                2 for set_device_name +
+   *                                2 for set_date_and_time +
    *                                1 for myCharNotify configuration descriptor +
-   *                              = 8
+   *                              = 10
    *
    * This value doesn't take into account number of descriptors manually added
    * In case of descriptors added, please update the max_attr_record value accordingly in the next SVCCTL_InitService User Section
    */
-  max_attr_record = 8;
+  max_attr_record = 10;
 
   /* USER CODE BEGIN SVCCTL_InitService1 */
   /* max_attr_record to be updated if descriptors have been added */
@@ -419,6 +465,32 @@ void SVCCTL_InitCustomSvc(void)
   /* Place holder for Characteristic Descriptors */
 
   /* USER CODE END SVCCTL_Init_Service1_Char3 */
+  /**
+   *  set_date_and_time
+   */
+  COPY_SET_DATE_AND_TIME_UUID(uuid.Char_UUID_128);
+  ret = aci_gatt_add_char(CustomContext.CustomBpserviceHdle,
+                          UUID_TYPE_128, &uuid,
+                          SizeSet_Date_And_Time,
+                          CHAR_PROP_WRITE,
+                          ATTR_PERMISSION_NONE,
+                          GATT_NOTIFY_ATTRIBUTE_WRITE,
+                          0x10,
+                          CHAR_VALUE_LEN_CONSTANT,
+                          &(CustomContext.CustomSet_Date_And_TimeHdle));
+  if (ret != BLE_STATUS_SUCCESS)
+  {
+    APP_DBG_MSG("  Fail   : aci_gatt_add_char command   : SET_DATE_AND_TIME, error code: 0x%x \n\r", ret);
+  }
+  else
+  {
+    APP_DBG_MSG("  Success: aci_gatt_add_char command   : SET_DATE_AND_TIME \n\r");
+  }
+
+  /* USER CODE BEGIN SVCCTL_Init_Service1_Char4 */
+  /* Place holder for Characteristic Descriptors */
+
+  /* USER CODE END SVCCTL_Init_Service1_Char4 */
 
   /* USER CODE BEGIN SVCCTL_InitCustomSvc_2 */
 
@@ -498,6 +570,25 @@ tBleStatus Custom_STM_App_Update_Char(Custom_STM_Char_Opcode_t CharOpcode, uint8
       /* USER CODE BEGIN CUSTOM_STM_App_Update_Service_1_Char_3*/
 
       /* USER CODE END CUSTOM_STM_App_Update_Service_1_Char_3*/
+      break;
+
+    case CUSTOM_STM_SET_DATE_AND_TIME:
+      ret = aci_gatt_update_char_value(CustomContext.CustomBpserviceHdle,
+                                       CustomContext.CustomSet_Date_And_TimeHdle,
+                                       0, /* charValOffset */
+                                       SizeSet_Date_And_Time, /* charValueLen */
+                                       (uint8_t *)  pPayload);
+      if (ret != BLE_STATUS_SUCCESS)
+      {
+        APP_DBG_MSG("  Fail   : aci_gatt_update_char_value SET_DATE_AND_TIME command, result : 0x%x \n\r", ret);
+      }
+      else
+      {
+        APP_DBG_MSG("  Success: aci_gatt_update_char_value SET_DATE_AND_TIME command\n\r");
+      }
+      /* USER CODE BEGIN CUSTOM_STM_App_Update_Service_1_Char_4*/
+
+      /* USER CODE END CUSTOM_STM_App_Update_Service_1_Char_4*/
       break;
 
     default:
@@ -585,6 +676,25 @@ tBleStatus Custom_STM_App_Update_Char_Variable_Length(Custom_STM_Char_Opcode_t C
       /* USER CODE END Custom_STM_App_Update_Char_Variable_Length_Service_1_Char_3*/
       break;
 
+    case CUSTOM_STM_SET_DATE_AND_TIME:
+      ret = aci_gatt_update_char_value(CustomContext.CustomBpserviceHdle,
+                                       CustomContext.CustomSet_Date_And_TimeHdle,
+                                       0, /* charValOffset */
+                                       size, /* charValueLen */
+                                       (uint8_t *)  pPayload);
+      if (ret != BLE_STATUS_SUCCESS)
+      {
+        APP_DBG_MSG("  Fail   : aci_gatt_update_char_value SET_DATE_AND_TIME command, result : 0x%x \n\r", ret);
+      }
+      else
+      {
+        APP_DBG_MSG("  Success: aci_gatt_update_char_value SET_DATE_AND_TIME command\n\r");
+      }
+      /* USER CODE BEGIN Custom_STM_App_Update_Char_Variable_Length_Service_1_Char_4*/
+
+      /* USER CODE END Custom_STM_App_Update_Char_Variable_Length_Service_1_Char_4*/
+      break;
+
     default:
       break;
   }
@@ -650,6 +760,22 @@ tBleStatus Custom_STM_App_Update_Char_Ext(uint16_t Connection_Handle, Custom_STM
 
       /* USER CODE END Updated_Length_Service_1_Char_3*/
       ret = Generic_STM_App_Update_Char_Ext(Connection_Handle, CustomContext.CustomBpserviceHdle, CustomContext.CustomSet_Device_NameHdle, SizeSet_Device_Name, pPayload);
+
+      if (ret != BLE_STATUS_SUCCESS)
+      {
+        APP_DBG_MSG("  Fail   : Generic_STM_App_Update_Char_Ext command, result : 0x%x \n\r", ret);
+      }
+      else
+      {
+        APP_DBG_MSG("  Success: Generic_STM_App_Update_Char_Ext command\n\r");
+      }
+      break;
+
+    case CUSTOM_STM_SET_DATE_AND_TIME:
+      /* USER CODE BEGIN Updated_Length_Service_1_Char_4*/
+
+      /* USER CODE END Updated_Length_Service_1_Char_4*/
+      ret = Generic_STM_App_Update_Char_Ext(Connection_Handle, CustomContext.CustomBpserviceHdle, CustomContext.CustomSet_Date_And_TimeHdle, SizeSet_Date_And_Time, pPayload);
 
       if (ret != BLE_STATUS_SUCCESS)
       {

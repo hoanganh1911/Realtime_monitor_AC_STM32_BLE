@@ -38,6 +38,7 @@ typedef enum
   CUSTOM_STM_RELAYCONTROL,
   CUSTOM_STM_MYCHARNOTIFY,
   CUSTOM_STM_SET_DEVICE_NAME,
+  CUSTOM_STM_SET_DATE_AND_TIME,
 } Custom_STM_Char_Opcode_t;
 
 typedef enum
@@ -49,6 +50,8 @@ typedef enum
   CUSTOM_STM_MYCHARNOTIFY_NOTIFY_DISABLED_EVT,
   /* set_device_name */
   CUSTOM_STM_SET_DEVICE_NAME_WRITE_EVT,
+  /* set_date_and_time */
+  CUSTOM_STM_SET_DATE_AND_TIME_WRITE_EVT,
   CUSTOM_STM_NOTIFICATION_COMPLETE_EVT,
 
   CUSTOM_STM_BOOT_REQUEST_EVT
@@ -77,6 +80,7 @@ typedef struct
 extern uint16_t SizeRelaycontrol;
 extern uint16_t SizeMycharnotify;
 extern uint16_t SizeSet_Device_Name;
+extern uint16_t SizeSet_Date_And_Time;
 
 /* USER CODE BEGIN EC */
 

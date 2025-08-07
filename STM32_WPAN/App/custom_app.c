@@ -45,7 +45,8 @@ typedef struct
 } Custom_App_Context_t;
 
 /* USER CODE BEGIN PTD */
-
+extern RTC_TimeTypeDef sTime;
+extern RTC_DateTypeDef sDate;
 /* USER CODE END PTD */
 
 /* Private defines ------------------------------------------------------------*/
@@ -75,6 +76,7 @@ uint16_t Connection_Handle;
 /* USER CODE BEGIN PV */
 extern bool flag_Update;
 extern uint8_t BLESetName[50];
+uint8_t BLE_Date_and_Time[28];
 float power_watts = 74.3;
 /* USER CODE END PV */
 
@@ -88,16 +90,19 @@ void myTask(void)
 {
 	if(flag_Update == true) {
 		flag_Update = false;
-	    const char* outlet_id = "A1";
 	    const char* timestamp = "2025-05-23T15:40:00Z";
 	    power_watts ++;
+	    snprintf(BLE_Date_and_Time, sizeof(BLE_Date_and_Time),
+	             "20%02d-%02d-%02dT%02d:%02d:%02dZ",
+	             sDate.Year, sDate.Month, sDate.Date,
+	             sTime.Hours, sTime.Minutes, sTime.Seconds);
 	    snprintf((char*)UpdateCharData, sizeof(UpdateCharData),
 	        "{\n"
 	        "\"outlet_id\": \"%s\",\n"
 	        "\"timestamp\": \"%s\",\n"
 	        "\"power_watts\": %.1f\n"
 	        "}\n",
-			(char *)BLESetName, timestamp, power_watts);
+			(char *)BLESetName, (char *)BLE_Date_and_Time, power_watts);
 		Custom_Mycharnotify_Update_Char();
 	}
 	UTIL_SEQ_SetTask(1 << CFG_TASK_MY_TASK, CFG_SCH_PRIO_0);
@@ -139,6 +144,12 @@ void Custom_STM_App_Notification(Custom_STM_App_Notification_evt_t *pNotificatio
       /* USER CODE BEGIN CUSTOM_STM_SET_DEVICE_NAME_WRITE_EVT */
 
       /* USER CODE END CUSTOM_STM_SET_DEVICE_NAME_WRITE_EVT */
+      break;
+
+    case CUSTOM_STM_SET_DATE_AND_TIME_WRITE_EVT:
+      /* USER CODE BEGIN CUSTOM_STM_SET_DATE_AND_TIME_WRITE_EVT */
+
+      /* USER CODE END CUSTOM_STM_SET_DATE_AND_TIME_WRITE_EVT */
       break;
 
     case CUSTOM_STM_NOTIFICATION_COMPLETE_EVT:
