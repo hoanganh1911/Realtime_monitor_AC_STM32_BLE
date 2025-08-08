@@ -59,15 +59,19 @@ TIM_HandleTypeDef htim2;
 /* USER CODE BEGIN PV */
 uint8_t rxBuffer[RX_BUFFER_SIZE];
 uint8_t rxBuffer1[RX_BUFFER_SIZE];
-uint8_t txBuffer[TX_BUFFER_SIZE];
+uint8_t txBuffer[2];
 float BL0942_I_R1  = 1 ;
 float BL0942_I_Rt =888 ;
 int tick = 0;
 bool flag_Update = false;
 float voltage;
 float current;
+float power;
+uint32_t get_reg_data;
 uint32_t I_RMS_ADC = 0;
 uint32_t V_RMS_ADC = 0;
+uint32_t W_RMS_ADC = 0;
+extern bool isMeasuring;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -88,8 +92,25 @@ static void MX_RF_Init(void);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	if(huart->Instance == LPUART1)
 	{
-		HAL_UART_Transmit(&hlpuart1, (uint8_t*)"OK\n", strlen("OK\n"), HAL_MAX_DELAY);
-		HAL_UART_Receive_IT(&hlpuart1, rxBuffer, 1);
+	  get_reg_data = (int32_t)((uint8_t)rxBuffer[2] << 16 |
+												 (uint8_t)rxBuffer[1] << 8  |
+												 (uint8_t)rxBuffer[0]);
+
+		if (get_reg_data != 0)
+		{
+			W_RMS_ADC = get_reg_data;
+		}
+		else
+		{
+			if(get_reg_data ==0)
+			{
+				W_RMS_ADC = 0;
+			}
+			get_reg_data = W_RMS_ADC;
+		}
+		power = (get_reg_data * BL0942_VREF * BL0942_VREF * BL0942_V_R1) / (3537.0 * (BL0942_I_R1 * 1000.0 / BL0942_I_Rt) * BL0942_V_R2 * 1000.0);
+
+		HAL_UART_Receive_IT(&hlpuart1, rxBuffer, RX_BUFFER_SIZE);
 	}
 }
 /* USER CODE END 0 */
@@ -136,7 +157,7 @@ int main(void)
   MX_TIM2_Init();
   MX_RF_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&hlpuart1, rxBuffer, 1);
+  HAL_UART_Receive_IT(&hlpuart1, rxBuffer, RX_BUFFER_SIZE);
   HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
@@ -483,6 +504,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		tick++;
 		if (tick == 5) {
 			tick = 0;
+			if(isMeasuring == true)
+			{
+            	txBuffer[0] = 0x58;
+            	txBuffer[1] = 0x06;
+            	HAL_UART_Transmit(&hlpuart1, txBuffer, 2, 1000);
+			}
 			flag_Update = true;
 		}
 	}

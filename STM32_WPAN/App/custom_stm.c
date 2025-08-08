@@ -24,6 +24,7 @@
 
 /* USER CODE BEGIN Includes */
 #include "main.h"
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,6 +45,7 @@ extern uint16_t Connection_Handle;
 extern RTC_TimeTypeDef sTime;
 extern RTC_DateTypeDef sDate;
 extern RTC_HandleTypeDef hrtc;
+extern UART_HandleTypeDef hlpuart1;
 /* USER CODE END PTD */
 
 /* Private defines -----------------------------------------------------------*/
@@ -85,6 +87,8 @@ static CustomContext_t CustomContext;
 
 /* USER CODE BEGIN PV */
 uint8_t BLESetName[50] = {0};
+bool isMeasuring = false;
+extern float power;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -203,10 +207,13 @@ static SVCCTL_EvtAckStatus_t Custom_STM_Event_Handler(void *Event)
             if (strncmp((char *)attribute_modified->Attr_Data, "ON", 2) == 0)
             {
 				HAL_GPIO_WritePin(RELAY_CTRL_GPIO_Port, RELAY_CTRL_Pin, GPIO_PIN_SET);
+				isMeasuring = true;
             }
             else if (strncmp((char *)attribute_modified->Attr_Data, "OFF", 3) == 0)
             {
             	HAL_GPIO_WritePin(RELAY_CTRL_GPIO_Port, RELAY_CTRL_Pin, GPIO_PIN_RESET);
+            	isMeasuring = false;
+            	power = 0;
             }
             /* USER CODE END CUSTOM_STM_Service_1_Char_1_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
           } /* if (attribute_modified->Attr_Handle == (CustomContext.CustomRelaycontrolHdle + CHARACTERISTIC_VALUE_ATTRIBUTE_OFFSET))*/

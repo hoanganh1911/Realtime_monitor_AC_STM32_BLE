@@ -77,7 +77,7 @@ uint16_t Connection_Handle;
 extern bool flag_Update;
 extern uint8_t BLESetName[50];
 uint8_t BLE_Date_and_Time[28];
-float power_watts = 74.3;
+extern float power;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -91,7 +91,6 @@ void myTask(void)
 	if(flag_Update == true) {
 		flag_Update = false;
 	    const char* timestamp = "2025-05-23T15:40:00Z";
-	    power_watts ++;
 	    snprintf(BLE_Date_and_Time, sizeof(BLE_Date_and_Time),
 	             "20%02d-%02d-%02dT%02d:%02d:%02dZ",
 	             sDate.Year, sDate.Month, sDate.Date,
@@ -102,7 +101,7 @@ void myTask(void)
 	        "\"timestamp\": \"%s\",\n"
 	        "\"power_watts\": %.1f\n"
 	        "}\n",
-			(char *)BLESetName, (char *)BLE_Date_and_Time, power_watts);
+			(char *)BLESetName, (char *)BLE_Date_and_Time, power);
 		Custom_Mycharnotify_Update_Char();
 	}
 	UTIL_SEQ_SetTask(1 << CFG_TASK_MY_TASK, CFG_SCH_PRIO_0);
